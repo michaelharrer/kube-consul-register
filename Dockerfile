@@ -1,4 +1,4 @@
-FROM alpine:3.5
+FROM alpine:3.7
 
 
 RUN apk --update --no-cache upgrade && \
@@ -6,7 +6,7 @@ RUN apk --update --no-cache upgrade && \
     update-ca-certificates && \
     rm -rf /var/cache/apk/*
 
-COPY dist/kube-consul-register /
+COPY kube-consul-register /
 
 WORKDIR /
 

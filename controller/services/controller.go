@@ -25,7 +25,8 @@ import (
 // These are valid annotations names which are take into account.
 // "ConsulRegisterEnabledAnnotation" is a name of annotation key for `enabled` option.
 const (
-	ConsulRegisterEnabledAnnotation string = "consul.register/enabled"
+	ConsulRegisterEnabledAnnotation     string = "consul.register/enabled"
+	ConsulRegisterHealthCheckAnnotation string = "consul.register/health.check"
 )
 
 var (
@@ -576,6 +577,19 @@ func (c *Controller) createConsulService(svc *v1.Service, address string, port i
 	service.Tags = []string{c.cfg.Controller.K8sTag}
 	service.Tags = append(service.Tags, fmt.Sprintf("uid:%s", svc.ObjectMeta.UID))
 	service.Tags = append(service.Tags, labelsToTags(svc.ObjectMeta.Labels)...)
+
+	check := &consulapi.AgentServiceCheck{}
+	check.Status = "passing"
+	check.Interval = "10s"
+	check.Timeout = "20s"
+	if path, ok := svc.Annotations[ConsulRegisterHealthCheckAnnotation]; ok {
+		check.HTTP = fmt.Sprintf("%s://%s:%d%s", "http", address, port, path)
+		glog.Infof("Healthcheck %s://%s:%d%s via annotation", "http", address, port, path)
+	} else {
+		check.HTTP = fmt.Sprintf("%s://%s:%d%s", "http", address, port, "/health")
+		glog.Infof("Healthcheck %s://%s:%d%s via defaultvalue", "http", address, port, "/health")
+	}
+	service.Check = check
 
 	service.Port = int(port)
 	service.Address = address
