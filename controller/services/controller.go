@@ -578,7 +578,7 @@ func (c *Controller) createConsulService(svc *v1.Service, address string, port i
 	service.Tags = []string{c.cfg.Controller.K8sTag}
 	service.Tags = append(service.Tags, fmt.Sprintf("uid:%s", svc.ObjectMeta.UID))
 	service.Tags = append(service.Tags, labelsToTags(svc.ObjectMeta.Labels)...)
-
+	
 	if path, ok := svc.Annotations[ConsulRegisterHealthCheckPathAnnotation]; ok {
 		check := &consulapi.AgentServiceCheck{}
 		checkUri := fmt.Sprintf("%s://%s:%d%s", "http", address, port, path)
