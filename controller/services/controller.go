@@ -24,9 +24,10 @@ import (
 
 // These are valid annotations names which are take into account.
 // "ConsulRegisterEnabledAnnotation" is a name of annotation key for `enabled` option.
+// "ConsulRegisterHealthCheckPathAnnotation" is a name of annotation key to enable service healthchecks (i.e. "/health")
 const (
-	ConsulRegisterEnabledAnnotation     string = "consul.register/enabled"
-	ConsulRegisterHealthCheckAnnotation string = "consul.register/health.check"
+	ConsulRegisterEnabledAnnotation         string = "consul.register/enabled"
+	ConsulRegisterHealthCheckPathAnnotation string = "consul.register/healthcheck.path"
 )
 
 var (
@@ -578,18 +579,16 @@ func (c *Controller) createConsulService(svc *v1.Service, address string, port i
 	service.Tags = append(service.Tags, fmt.Sprintf("uid:%s", svc.ObjectMeta.UID))
 	service.Tags = append(service.Tags, labelsToTags(svc.ObjectMeta.Labels)...)
 
-	check := &consulapi.AgentServiceCheck{}
-	check.Status = "passing"
-	check.Interval = "10s"
-	check.Timeout = "20s"
-	if path, ok := svc.Annotations[ConsulRegisterHealthCheckAnnotation]; ok {
-		check.HTTP = fmt.Sprintf("%s://%s:%d%s", "http", address, port, path)
-		glog.Infof("Healthcheck %s://%s:%d%s via annotation", "http", address, port, path)
-	} else {
-		check.HTTP = fmt.Sprintf("%s://%s:%d%s", "http", address, port, "/health")
-		glog.Infof("Healthcheck %s://%s:%d%s via defaultvalue", "http", address, port, "/health")
+	if path, ok := svc.Annotations[ConsulRegisterHealthCheckPathAnnotation]; ok {
+		check := &consulapi.AgentServiceCheck{}
+		checkUri := fmt.Sprintf("%s://%s:%d%s", "http", address, port, path)
+		check.Status = "passing"
+		check.Interval = "10s"
+		check.Timeout = "20s"
+		check.HTTP = checkUri
+		service.Check = check
+		glog.Infof("Added healthcheck %s via annotation", checkUri)
 	}
-	service.Check = check
 
 	service.Port = int(port)
 	service.Address = address
